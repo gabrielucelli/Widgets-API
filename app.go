@@ -6,14 +6,22 @@ import (
     "log"
     "net/http"
     "strconv"
+    "os"
     "github.com/gorilla/mux"
+    "github.com/gorilla/handlers"
+    "time"
+    "github.com/dgrijalva/jwt-go"
     _ "github.com/mattn/go-sqlite3"
+    "fmt"
+    "strings"
 )
 
 type App struct {
 	Router 	*mux.Router
 	DB		*sql.DB
 }
+
+var publicKey = []byte("secret")
 
 func (a *App) Initialize(dbname string) {
 
@@ -31,16 +39,17 @@ func (a *App) Initialize(dbname string) {
 }
 
 func (a *App) Run(addr string) { 
-	log.Fatal(http.ListenAndServe(addr, a.Router))
+	http.ListenAndServe(addr, handlers.LoggingHandler(os.Stdout, a.Router))
 }
 
 func (a *App) initializeRoutes() {
-    a.Router.HandleFunc("/user", a.getUsers).Methods("GET")
-    a.Router.HandleFunc("/user/{id:[0-9]+}", a.getUser).Methods("GET")
-    a.Router.HandleFunc("/widget", a.getWidgets).Methods("GET")
-    a.Router.HandleFunc("/widget", a.createWidget).Methods("POST")
-    a.Router.HandleFunc("/widget/{id:[0-9]+}", a.getWidget).Methods("GET")
-    a.Router.HandleFunc("/widget/{id:[0-9]+}", a.updateWidget).Methods("PUT")
+    a.Router.Handle("/user", a.auth(a.getUsers)).Methods("GET")
+    a.Router.Handle("/user/{id:[0-9]+}", a.auth(a.getUser)).Methods("GET")
+    a.Router.Handle("/widget", a.auth(a.getWidgets)).Methods("GET")
+    a.Router.Handle("/widget", a.auth(a.createWidget)).Methods("POST")
+    a.Router.Handle("/widget/{id:[0-9]+}", a.auth(a.getWidget)).Methods("GET")
+    a.Router.Handle("/widget/{id:[0-9]+}", a.auth(a.updateWidget)).Methods("PUT")
+    a.Router.HandleFunc("/token", a.createToken).Methods("POST")
 }
 
 func (a *App) getUser(w http.ResponseWriter, r *http.Request) {
@@ -168,6 +177,89 @@ func (a *App) updateWidget(w http.ResponseWriter, r *http.Request) {
     }
 
     respondWithJSON(w, http.StatusOK, wid)
+}
+
+func (a *App) createToken(w http.ResponseWriter, r *http.Request) {
+
+	var u user
+
+    decoder := json.NewDecoder(r.Body)
+
+    if err := decoder.Decode(&u); err != nil {
+        respondWithError(w, http.StatusBadRequest, "Invalid request payload")
+        return
+    }
+
+    err := u.getUser(a.DB)
+
+    if err != nil {
+    	respondWithError(w, http.StatusBadRequest, "Invalid user ID")
+    	return 
+    }
+
+	token := jwt.New(jwt.SigningMethodHS256)
+	claims := make(jwt.MapClaims)
+
+	claims["user"] = u
+    claims["exp"] = time.Now().Add(time.Hour * 24).Unix()
+
+    token.Claims = claims
+    
+    tokenString, err := token.SignedString(publicKey)
+
+ 	if err != nil {
+ 		respondWithError(w, http.StatusInternalServerError, "Failed to sign token")
+    }
+
+    respondWithJSON(w, http.StatusOK, map[string]string{"token": tokenString})
+}
+
+func (a *App) auth(handler func(http.ResponseWriter, *http.Request)) http.Handler {
+
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+        var token string
+
+        tokens, ok := r.Header["Authorization"]
+
+        if ok && len(tokens) >= 1 {
+            token = tokens[0]
+            token = strings.TrimPrefix(token, "Bearer ")
+        }
+
+        if token == "" {
+            respondWithError(w, http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
+            return
+        }
+
+        parsedToken, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
+
+            if _, ok := token.Method.(*jwt.SigningMethodHMAC); 
+
+            !ok {
+                msg := fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+                return nil, msg
+            }
+
+            return publicKey, nil
+
+        })
+
+        if err != nil {
+        	fmt.Print(err)
+            respondWithError(w, http.StatusUnauthorized, "Error parsing token")
+            return
+        }
+
+        if parsedToken != nil && parsedToken.Valid {
+            http.HandlerFunc(handler).ServeHTTP(w, r)
+        }
+
+        // Token is invalid
+        http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+
+        return
+    })
 }
 
 func respondWithError(w http.ResponseWriter, code int, message string) {

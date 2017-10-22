@@ -20,7 +20,6 @@ func (w *widget) getWidget(db *sql.DB) error {
   	w.ID).Scan(&w.Name, &w.Color, &w.Price, &w.Inventory, &w.Melts)
 }
 
-/* SELECT seq FROM sqlite_sequence WHERE name=\"widgets\"; */
 func (w *widget) updateWidget(db *sql.DB) error {
     _, err :=
         db.Exec("UPDATE widgets SET name=$1, color=$2, price=$3, inventory=$4, melts=$5 WHERE id=$6",
@@ -46,10 +45,8 @@ func (w *widget) createWidget(db *sql.DB) error {
       
     w.ID = int(id)
     
-    return nil
-    
+    return nil   
 }
-
 
 func getWidgets(db *sql.DB) ([]widget, error) {
 
@@ -72,5 +69,4 @@ func getWidgets(db *sql.DB) ([]widget, error) {
   }
 
   return widgets, nil
-
 }

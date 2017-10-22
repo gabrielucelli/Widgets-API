@@ -37,5 +37,4 @@ func getUsers(db *sql.DB) ([]user, error) {
   }
 
   return users, nil
-
 }
