@@ -9,6 +9,7 @@ import (
     "os"
     "github.com/gorilla/mux"
     "github.com/gorilla/handlers"
+    "github.com/gorilla/schema"
     "time"
     "github.com/dgrijalva/jwt-go"
     _ "github.com/mattn/go-sqlite3"
@@ -22,6 +23,7 @@ type App struct {
 }
 
 var publicKey = []byte("secret")
+var decoder = schema.NewDecoder()
 
 func (a *App) Initialize(dbname string) {
 
@@ -39,7 +41,7 @@ func (a *App) Initialize(dbname string) {
 }
 
 func (a *App) Run(addr string) { 
-	http.ListenAndServe(addr, handlers.LoggingHandler(os.Stdout, a.Router))
+	http.ListenAndServe(addr, handlers.CORS()(handlers.LoggingHandler(os.Stdout, a.Router)))
 }
 
 func (a *App) initializeRoutes() {
@@ -66,10 +68,10 @@ func (a *App) getUser(w http.ResponseWriter, r *http.Request) {
 
     if err := u.getUser(a.DB); err != nil {
         switch err {
-        case sql.ErrNoRows:
-            respondWithError(w, http.StatusNotFound, "User not found")
-        default:
-            respondWithError(w, http.StatusInternalServerError, err.Error())
+        	case sql.ErrNoRows:
+            	respondWithError(w, http.StatusNotFound, "User not found")
+        	default:
+            	respondWithError(w, http.StatusInternalServerError, err.Error())
         }
         return
     }
@@ -181,16 +183,19 @@ func (a *App) updateWidget(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) createToken(w http.ResponseWriter, r *http.Request) {
 
+    err := r.ParseForm(); if err != nil {
+	        respondWithError(w, http.StatusBadRequest, "ParseForm error")
+	      	return
+	    }
+
 	var u user
 
-    decoder := json.NewDecoder(r.Body)
+	err = decoder.Decode(&u, r.Form); if err != nil {
+    	respondWithError(w, http.StatusBadRequest, "Invalid request payload")
+    	return
+	}
 
-    if err := decoder.Decode(&u); err != nil {
-        respondWithError(w, http.StatusBadRequest, "Invalid request payload")
-        return
-    }
-
-    err := u.getUser(a.DB)
+    err = u.getUser(a.DB)
 
     if err != nil {
     	respondWithError(w, http.StatusBadRequest, "Invalid user ID")
@@ -209,6 +214,7 @@ func (a *App) createToken(w http.ResponseWriter, r *http.Request) {
 
  	if err != nil {
  		respondWithError(w, http.StatusInternalServerError, "Failed to sign token")
+ 		return
     }
 
     respondWithJSON(w, http.StatusOK, map[string]string{"token": tokenString})
@@ -253,10 +259,11 @@ func (a *App) auth(handler func(http.ResponseWriter, *http.Request)) http.Handle
 
         if parsedToken != nil && parsedToken.Valid {
             http.HandlerFunc(handler).ServeHTTP(w, r)
+            return
         }
 
         // Token is invalid
-        http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+        respondWithError(w, http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
 
         return
     })
