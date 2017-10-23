@@ -5,5 +5,5 @@ package main
 func main() {
 	a := App{}
 	a.Initialize("./spa.sqlite")
-	a.Run(":8080")
+	a.Run(":3000")
 }
