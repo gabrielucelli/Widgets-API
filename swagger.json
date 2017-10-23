@@ -44,7 +44,7 @@
         }
       }
     },
-    "/user{userId}": {
+    "/user/{userId}": {
       "get": {
         "tags": [
           "user"
@@ -124,47 +124,21 @@
           }
         ],
         "consumes": [
-          "application/x-www-form-urlencoded"
+          "application/json"
         ],
         "produces": [
           "application/json"
         ],
         "parameters": [
           {
-            "name": "name",
-            "in": "formData",
-            "description": "name",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "color",
-            "in": "formData",
-            "description": "color",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "price",
-            "in": "formData",
-            "description": "price",
-            "required": true,
-            "type": "number"
-          },
-          {
-            "name": "inventory",
-            "in": "formData",
-            "description": "inventory",
-            "required": true,
-            "type": "integer"
-          },
-          {
-            "name": "melts",
-            "in": "formData",
-            "description": "melts",
-            "required": true,
-            "type": "boolean"
+          "in": "body",
+          "name": "body",
+          "description": "Widget object that needs to be added",
+          "required": false,
+          "schema": {
+            "$ref": "#/definitions/NewWidget"
           }
+        }
         ],
         "responses": {
           "200": {
@@ -179,7 +153,7 @@
         }
       }
     },
-    "/widget{widgetId}": {
+    "/widget/{widgetId}": {
       "get": {
         "tags": [
           "widget"
@@ -227,55 +201,28 @@
           }
         ],
         "consumes": [
-          "application/x-www-form-urlencoded"
+          "application/json"
         ],
         "produces": [
           "application/json"
         ],
         "parameters": [
           {
-            "name": "id",
-            "in": "formData",
+            "name": "widgetId",
+            "in": "path",
             "description": "id",
             "type": "integer",
             "required": true
           },
           {
-            "name": "name",
-            "in": "formData",
-            "description": "name",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "color",
-            "in": "formData",
-            "description": "color",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "price",
-            "in": "formData",
-            "description": "price",
-            "required": true,
-            "type": "number"
-          },
-          {
-            "name": "inventory",
-            "in": "formData",
-            "description": "inventory",
-            "required": true,
-            "type": "integer"
-          },
-          {
-            "name": "melts",
-            "in": "formData",
-            "description": "melts",
-            "required": true,
-            "type": "boolean"
-          }
-        ],
+            "in": "body",
+            "name": "body",
+            "description": "Widget object that needs to be added",
+            "required": false,
+            "schema": {
+              "$ref": "#/definitions/NewWidget"
+            }
+        }],
         "responses": {
           "200": {
             "description": "successful operation",
@@ -295,7 +242,7 @@
           "token"
         ],
         "summary": "Create Token",
-        "description": "Returns a token using a valid userID",
+        "description": "Returns a token using a valid userID, it's needed a userID to link the token with the user. In the real world it's can be a login and password",
         "operationId": "createToken",
         "consumes": [
           "application/x-www-form-urlencoded"
@@ -307,7 +254,7 @@
           {
             "name": "id",
             "in": "formData",
-            "description": "user id",
+            "description": "user id (use id 1 for test)",
             "required": true,
             "type": "integer"
           }
@@ -374,6 +321,41 @@
           "type": "integer",
           "example": 16
         },
+        "name": {
+          "type": "string",
+          "example": "Claster"
+        },
+        "color": {
+          "type": "string",
+          "example": "off-white"
+        },
+        "price": {
+          "type": "number",
+          "example": 12.56
+        },
+        "inventory": {
+          "type": "integer",
+          "example": 18
+        },
+        "melts": {
+          "type": "boolean",
+          "example": true
+        }
+      },
+      "xml": {
+        "name": "Pet"
+      }
+    },
+    "NewWidget": {
+      "type": "object",
+      "required": [
+        "name",
+        "color",
+        "price",
+        "inventory",
+        "melts"
+      ],
+      "properties": {
         "name": {
           "type": "string",
           "example": "Claster"

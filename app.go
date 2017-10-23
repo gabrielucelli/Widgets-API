@@ -40,8 +40,13 @@ func (a *App) Initialize(dbname string) {
     a.initializeRoutes()
 }
 
-func (a *App) Run(addr string) { 
-	http.ListenAndServe(addr, handlers.CORS()(handlers.LoggingHandler(os.Stdout, a.Router)))
+func (a *App) Run(addr string) {
+
+    headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "authorization"})
+    methodsOk := handlers.AllowedMethods([]string{"GET", "POST", "PUT"})
+
+	http.ListenAndServe(addr, handlers.LoggingHandler(os.Stdout, 
+        handlers.CORS(headersOk, methodsOk)(a.Router)))
 }
 
 func (a *App) initializeRoutes() {
