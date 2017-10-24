@@ -1,0 +1,10 @@
+api:  
+  image: "widget-api"
+  ports: ["8080:3000"]
+
+swagger_ui:
+  environment:
+    - SWAGGER_JSON=/spec/swagger.json
+  image:   "swaggerapi/swagger-ui"
+  volumes: ["./api:/spec"]
+  ports:   ["80:8080"]
