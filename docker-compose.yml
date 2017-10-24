@@ -1,5 +1,5 @@
 api:  
-  image: "widget-api"
+  build: ./api
   ports: ["8080:3000"]
 
 swagger_ui:
