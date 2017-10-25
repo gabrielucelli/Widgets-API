@@ -9,7 +9,15 @@ Things that you need to install
 * docker
 * docker-compose
 
-### Runnig
+### Running
+
+First, you need download the code:
+
+```
+git clone https://github.com/gabrielucelli/Widgets-API.git
+```
+
+then
 
 ```
 docker-compose up
